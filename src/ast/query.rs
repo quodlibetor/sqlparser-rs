@@ -23,9 +23,9 @@ pub struct Query {
     /// ORDER BY
     pub order_by: Vec<OrderByExpr>,
     /// `LIMIT { <N> | ALL }`
-    pub limit: Option<Expr>,
+    pub limit: Option<u64>,
     /// `OFFSET <N> { ROW | ROWS }`
-    pub offset: Option<Expr>,
+    pub offset: Option<u64>,
     /// `FETCH { FIRST | NEXT } <N> [ PERCENT ] { ROW | ROWS } | { ONLY | WITH TIES }`
     pub fetch: Option<Fetch>,
 }

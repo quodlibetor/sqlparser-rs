@@ -1176,14 +1176,7 @@ impl Parser {
                         return parser_err!(format!("No value parser for keyword {}", k.keyword));
                     }
                 },
-                Token::Number(ref n) if n.contains('.') => match n.parse::<f64>() {
-                    Ok(n) => Ok(Value::Double(n.into())),
-                    Err(e) => parser_err!(format!("Could not parse '{}' as f64: {}", n, e)),
-                },
-                Token::Number(ref n) => match n.parse::<u64>() {
-                    Ok(n) => Ok(Value::Long(n)),
-                    Err(e) => parser_err!(format!("Could not parse '{}' as u64: {}", n, e)),
-                },
+                Token::Number(ref n) => Ok(Value::Number(n.to_string())),
                 Token::SingleQuotedString(ref s) => Ok(Value::SingleQuotedString(s.to_string())),
                 Token::NationalStringLiteral(ref s) => {
                     Ok(Value::NationalStringLiteral(s.to_string()))
@@ -1854,20 +1847,17 @@ impl Parser {
     }
 
     /// Parse a LIMIT clause
-    pub fn parse_limit(&mut self) -> Result<Option<Expr>, ParserError> {
+    pub fn parse_limit(&mut self) -> Result<Option<u64>, ParserError> {
         if self.parse_keyword("ALL") {
             Ok(None)
         } else {
-            self.parse_literal_uint()
-                .map(|n| Some(Expr::Value(Value::Long(n))))
+            Ok(Some(self.parse_literal_uint()?))
         }
     }
 
     /// Parse an OFFSET clause
-    pub fn parse_offset(&mut self) -> Result<Expr, ParserError> {
-        let value = self
-            .parse_literal_uint()
-            .map(|n| Expr::Value(Value::Long(n)))?;
+    pub fn parse_offset(&mut self) -> Result<u64, ParserError> {
+        let value = self.parse_literal_uint()?;
         self.expect_one_of_keywords(&["ROW", "ROWS"])?;
         Ok(value)
     }
