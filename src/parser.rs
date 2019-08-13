@@ -1176,7 +1176,10 @@ impl Parser {
                         return parser_err!(format!("No value parser for keyword {}", k.keyword));
                     }
                 },
-                Token::Number(ref n) => Ok(Value::Number(n.to_string())),
+                Token::Number(ref n) => match n.parse() {
+                    Ok(n) => Ok(Value::Number(n)),
+                    Err(e) => parser_err!(format!("Could not parse '{}' as number: {}", n, e)),
+                },
                 Token::SingleQuotedString(ref s) => Ok(Value::SingleQuotedString(s.to_string())),
                 Token::NationalStringLiteral(ref s) => {
                     Ok(Value::NationalStringLiteral(s.to_string()))

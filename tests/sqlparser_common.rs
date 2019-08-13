@@ -22,14 +22,14 @@ use matches::assert_matches;
 
 use sqlparser::ast::*;
 use sqlparser::parser::*;
-use sqlparser::test_utils::{all_dialects, expr_from_projection, only};
+use sqlparser::test_utils::{all_dialects, expr_from_projection, number, only};
 
 #[test]
 fn parse_insert_values() {
     let row = vec![
-        Expr::Value(Value::Number("1".into())),
-        Expr::Value(Value::Number("2".into())),
-        Expr::Value(Value::Number("3".into())),
+        Expr::Value(number("1")),
+        Expr::Value(number("2")),
+        Expr::Value(number("3")),
     ];
     let rows1 = vec![row.clone()];
     let rows2 = vec![row.clone(), row];
@@ -107,15 +107,15 @@ fn parse_update() {
                 vec![
                     Assignment {
                         id: "a".into(),
-                        value: Expr::Value(Value::Number("1".into())),
+                        value: Expr::Value(number("1")),
                     },
                     Assignment {
                         id: "b".into(),
-                        value: Expr::Value(Value::Number("2".into())),
+                        value: Expr::Value(number("2")),
                     },
                     Assignment {
                         id: "c".into(),
-                        value: Expr::Value(Value::Number("3".into())),
+                        value: Expr::Value(number("3")),
                     },
                 ]
             );
@@ -181,7 +181,7 @@ fn parse_where_delete_statement() {
                 Expr::BinaryOp {
                     left: Box::new(Expr::Identifier("name".to_string())),
                     op: Eq,
-                    right: Box::new(Expr::Value(Value::Number("5".into()))),
+                    right: Box::new(Expr::Value(number("5"))),
                 },
                 selection.unwrap(),
             );
@@ -286,7 +286,7 @@ fn parse_column_aliases() {
     } = only(&select.projection)
     {
         assert_eq!(&BinaryOperator::Plus, op);
-        assert_eq!(&Expr::Value(Value::Number("1".into())), right.as_ref());
+        assert_eq!(&Expr::Value(number("1")), right.as_ref());
         assert_eq!("newname", alias);
     } else {
         panic!("Expected ExprWithAlias")
@@ -427,6 +427,20 @@ fn parse_escaped_single_quote_string_predicate() {
 }
 
 #[test]
+fn parse_number() {
+    let expr = verified_expr("1.0");
+
+    #[cfg(feature = "bigdecimal")]
+    assert_eq!(
+        expr,
+        Expr::Value(Value::Number(bigdecimal::BigDecimal::from(1)))
+    );
+
+    #[cfg(not(feature = "bigdecimal"))]
+    assert_eq!(expr, Expr::Value(Value::Number("1.0".into())));
+}
+
+#[test]
 fn parse_compound_expr_1() {
     use self::BinaryOperator::*;
     use self::Expr::*;
@@ -527,9 +541,9 @@ fn parse_not_precedence() {
         Expr::UnaryOp {
             op: UnaryOperator::Not,
             expr: Box::new(Expr::Between {
-                expr: Box::new(Expr::Value(Value::Number("1".into()))),
-                low: Box::new(Expr::Value(Value::Number("1".into()))),
-                high: Box::new(Expr::Value(Value::Number("2".into()))),
+                expr: Box::new(Expr::Value(number("1"))),
+                low: Box::new(Expr::Value(number("1"))),
+                high: Box::new(Expr::Value(number("2"))),
                 negated: true,
             }),
         },
@@ -658,8 +672,8 @@ fn parse_between() {
         assert_eq!(
             Expr::Between {
                 expr: Box::new(Expr::Identifier("age".to_string())),
-                low: Box::new(Expr::Value(Value::Number("25".into()))),
-                high: Box::new(Expr::Value(Value::Number("32".into()))),
+                low: Box::new(Expr::Value(number("25"))),
+                high: Box::new(Expr::Value(number("32"))),
                 negated,
             },
             select.selection.unwrap()
@@ -676,16 +690,16 @@ fn parse_between_with_expr() {
     let select = verified_only_select(sql);
     assert_eq!(
         Expr::IsNull(Box::new(Expr::Between {
-            expr: Box::new(Expr::Value(Value::Number("1".into()))),
+            expr: Box::new(Expr::Value(number("1"))),
             low: Box::new(Expr::BinaryOp {
-                left: Box::new(Expr::Value(Value::Number("1".into()))),
+                left: Box::new(Expr::Value(number("1"))),
                 op: Plus,
-                right: Box::new(Expr::Value(Value::Number("2".into()))),
+                right: Box::new(Expr::Value(number("2"))),
             }),
             high: Box::new(Expr::BinaryOp {
-                left: Box::new(Expr::Value(Value::Number("3".into()))),
+                left: Box::new(Expr::Value(number("3"))),
                 op: Plus,
-                right: Box::new(Expr::Value(Value::Number("4".into()))),
+                right: Box::new(Expr::Value(number("4"))),
             }),
             negated: false,
         })),
@@ -697,19 +711,19 @@ fn parse_between_with_expr() {
     assert_eq!(
         Expr::BinaryOp {
             left: Box::new(Expr::BinaryOp {
-                left: Box::new(Expr::Value(Value::Number("1".into()))),
+                left: Box::new(Expr::Value(number("1"))),
                 op: BinaryOperator::Eq,
-                right: Box::new(Expr::Value(Value::Number("1".into()))),
+                right: Box::new(Expr::Value(number("1"))),
             }),
             op: BinaryOperator::And,
             right: Box::new(Expr::Between {
                 expr: Box::new(Expr::BinaryOp {
-                    left: Box::new(Expr::Value(Value::Number("1".into()))),
+                    left: Box::new(Expr::Value(number("1"))),
                     op: BinaryOperator::Plus,
                     right: Box::new(Expr::Identifier("x".to_string())),
                 }),
-                low: Box::new(Expr::Value(Value::Number("1".into()))),
-                high: Box::new(Expr::Value(Value::Number("2".into()))),
+                low: Box::new(Expr::Value(number("1"))),
+                high: Box::new(Expr::Value(number("2"))),
                 negated: false,
             }),
         },
@@ -792,7 +806,7 @@ fn parse_select_having() {
                 distinct: false
             })),
             op: BinaryOperator::Gt,
-            right: Box::new(Expr::Value(Value::Number("1".into())))
+            right: Box::new(Expr::Value(number("1")))
         }),
         select.having
     );
@@ -988,7 +1002,7 @@ fn parse_create_table_with_options() {
                     },
                     SqlOption {
                         name: "a".into(),
-                        value: Value::Number("123".into())
+                        value: number("123")
                     },
                 ],
                 with_options
@@ -1186,11 +1200,11 @@ fn parse_literal_decimal() {
     let select = verified_only_select(sql);
     assert_eq!(2, select.projection.len());
     assert_eq!(
-        &Expr::Value(Value::Number("0.300000000000000004".into())),
+        &Expr::Value(number("0.300000000000000004")),
         expr_from_projection(&select.projection[0]),
     );
     assert_eq!(
-        &Expr::Value(Value::Number("9007199254740993.0".into())),
+        &Expr::Value(number("9007199254740993.0")),
         expr_from_projection(&select.projection[1]),
     )
 }
@@ -1438,12 +1452,12 @@ fn parse_searched_case_expr() {
                 BinaryOp {
                     left: Box::new(Identifier("bar".to_string())),
                     op: Eq,
-                    right: Box::new(Expr::Value(Value::Number("0".into())))
+                    right: Box::new(Expr::Value(number("0")))
                 },
                 BinaryOp {
                     left: Box::new(Identifier("bar".to_string())),
                     op: GtEq,
-                    right: Box::new(Expr::Value(Value::Number("0".into())))
+                    right: Box::new(Expr::Value(number("0")))
                 }
             ],
             results: vec![
@@ -1468,7 +1482,7 @@ fn parse_simple_case_expr() {
     assert_eq!(
         &Case {
             operand: Some(Box::new(Identifier("foo".to_string()))),
-            conditions: vec![Expr::Value(Value::Number("1".into()))],
+            conditions: vec![Expr::Value(number("1"))],
             results: vec![Expr::Value(Value::SingleQuotedString("Y".to_string())),],
             else_result: Some(Box::new(Expr::Value(Value::SingleQuotedString(
                 "N".to_string()
@@ -2080,7 +2094,7 @@ fn parse_create_view_with_options() {
                     },
                     SqlOption {
                         name: "a".into(),
-                        value: Value::Number("123".into())
+                        value: number("123")
                     },
                 ],
                 with_options
@@ -2249,7 +2263,7 @@ fn parse_fetch() {
     let fetch_first_two_rows_only = Some(Fetch {
         with_ties: false,
         percent: false,
-        quantity: Some(Expr::Value(Value::Number("2".into()))),
+        quantity: Some(Expr::Value(number("2"))),
     });
     let ast = verified_query("SELECT foo FROM bar FETCH FIRST 2 ROWS ONLY");
     assert_eq!(ast.fetch, fetch_first_two_rows_only);
@@ -2276,7 +2290,7 @@ fn parse_fetch() {
         Some(Fetch {
             with_ties: true,
             percent: false,
-            quantity: Some(Expr::Value(Value::Number("2".into()))),
+            quantity: Some(Expr::Value(number("2"))),
         })
     );
     let ast = verified_query("SELECT foo FROM bar FETCH FIRST 50 PERCENT ROWS ONLY");
@@ -2285,7 +2299,7 @@ fn parse_fetch() {
         Some(Fetch {
             with_ties: false,
             percent: true,
-            quantity: Some(Expr::Value(Value::Number("50".into()))),
+            quantity: Some(Expr::Value(number("50"))),
         })
     );
     let ast = verified_query(
